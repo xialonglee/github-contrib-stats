@@ -1,15 +1,30 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
+	"io/ioutil"
 
 	"github.com/google/go-github/github"
 	"golang.org/x/oauth2"
 )
 
-// ... how to insert that parameters from external configuration files?
-const accessToken = "--- access token ---"
-const orgName = "--- organization name ---"
+var config Config
+
+type Config struct {
+	AccessToken string
+	OrgName     string
+}
+
+// read config file
+var _ = func() int {
+	file, err := ioutil.ReadFile("./config.json")
+	if err != nil {
+		panic(err)
+	}
+	json.Unmarshal(file, &config)
+	return 0
+}()
 
 type tokenSource struct {
 	token *oauth2.Token
@@ -20,10 +35,10 @@ func (t *tokenSource) Token() (*oauth2.Token, error) {
 }
 
 // create a github client only once.
-// call getClient() instead of client() or create client each time.
-func client() func() *github.Client {
+// call client() and create client only once.
+var client = func() func() *github.Client {
 	ts := &tokenSource{
-		&oauth2.Token{AccessToken: accessToken},
+		&oauth2.Token{AccessToken: config.AccessToken},
 	}
 
 	tc := oauth2.NewClient(oauth2.NoContext, ts)
@@ -32,9 +47,7 @@ func client() func() *github.Client {
 	return func() *github.Client {
 		return client
 	}
-}
-
-var getClient = client()
+}()
 
 func orgRepositoriesList() []github.Repository {
 	opt := &github.RepositoryListByOrgOptions{
@@ -44,8 +57,8 @@ func orgRepositoriesList() []github.Repository {
 		},
 	}
 
-	client := getClient()
-	repos, _, err := client.Repositories.ListByOrg(orgName, opt)
+	client := client()
+	repos, _, err := client.Repositories.ListByOrg(config.OrgName, opt)
 
 	if err != nil {
 		fmt.Println(err)
@@ -55,17 +68,17 @@ func orgRepositoriesList() []github.Repository {
 
 func pullRequestsList(repo github.Repository) []github.PullRequest {
 	opt := &github.PullRequestListOptions{
-		// State: ,
+		// State: "closed",
 		// Head: ,
 		// Base: ,
 		// Sort: ,
 		// Direction: ,
 		ListOptions: github.ListOptions{
-			PerPage: 10,
+			PerPage: 100,
 		},
 	}
 
-	client := getClient()
+	client := client()
 	pr, _, err := client.PullRequests.List(*repo.Owner.Login, *repo.Name, opt)
 
 	if err != nil {
@@ -79,14 +92,14 @@ func main() {
 	repos := orgRepositoriesList()
 
 	for i := 0; i < len(repos); i++ {
-		fmt.Println("---------------------")
-		fmt.Println(*repos[i].Name)
-		fmt.Println("---------------------")
+		fmt.Println("|---------------------|")
+		fmt.Printf("| %s\n", *repos[i].Name)
+		fmt.Println("|---------------------|")
 
 		pulls := pullRequestsList(repos[i])
 
 		for j := 0; j < len(pulls); j++ {
-			fmt.Println(*pulls[j].Title)
+			fmt.Printf("#%d - %s\n", *pulls[j].Number, *pulls[j].Title)
 		}
 
 	}
