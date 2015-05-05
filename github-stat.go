@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
+	"strings"
 
 	"github.com/google/go-github/github"
 	"golang.org/x/oauth2"
@@ -121,18 +122,29 @@ func statPullRequests() []ReposStat {
 	return stats
 }
 
-func formatOutput(stats []ReposStat) {
-	fmt.Print("\n")
-	for i := 0; i < len(stats); i++ {
-		fmt.Println("------------------------------------------")
-		fmt.Printf(" repo   : %s\n", stats[i].Name)
-		fmt.Printf(" open   : %d\n", stats[i].OpenPullRequest)
-		fmt.Printf(" closed : %d\n", stats[i].ClosedPullRequest)
-	}
+func separatorOutput() {
 	fmt.Println("------------------------------------------")
 }
 
+func fieldOutput(field, value string) {
+	base := " " + field + " "
+	padding := strings.Repeat(" ", 15-len(base))
+	fmt.Printf("%s%s: %s\n", base, padding, value)
+}
+
+func formatOutput(stats []ReposStat) {
+	fmt.Print("\n")
+	for i := 0; i < len(stats); i++ {
+		separatorOutput()
+		fieldOutput("repo", stats[i].Name)
+		fieldOutput("open", fmt.Sprintf("%d", stats[i].OpenPullRequest))
+		fieldOutput("closed", fmt.Sprintf("%d", stats[i].ClosedPullRequest))
+	}
+	separatorOutput()
+}
+
 func main() {
+	//	flags := os.Args()
 	stats := statPullRequests()
 	formatOutput(stats)
 }
