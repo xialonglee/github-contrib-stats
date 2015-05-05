@@ -53,7 +53,7 @@ func orgRepositoriesList() []github.Repository {
 	opt := &github.RepositoryListByOrgOptions{
 		Type: "all",
 		ListOptions: github.ListOptions{
-			PerPage: 50,
+			PerPage: 100,
 		},
 	}
 
@@ -66,15 +66,16 @@ func orgRepositoriesList() []github.Repository {
 	return repos
 }
 
-func pullRequestsList(repo github.Repository) []github.PullRequest {
+func pullRequestsList(repo github.Repository, page int) []github.PullRequest {
 	opt := &github.PullRequestListOptions{
-		// State: "closed",
+		State: "closed",
 		// Head: ,
 		// Base: ,
 		// Sort: ,
 		// Direction: ,
 		ListOptions: github.ListOptions{
 			PerPage: 100,
+			Page:    page,
 		},
 	}
 
@@ -88,19 +89,50 @@ func pullRequestsList(repo github.Repository) []github.PullRequest {
 	return pr
 }
 
-func main() {
+type ReposStat struct {
+	Name              string
+	ClosedPullRequest int
+	OpenPullRequest   int
+}
+
+func statPullRequests() []ReposStat {
 	repos := orgRepositoriesList()
+	stats := make([]ReposStat, len(repos), len(repos))
 
 	for i := 0; i < len(repos); i++ {
-		fmt.Println("|---------------------|")
-		fmt.Printf("| %s\n", *repos[i].Name)
-		fmt.Println("|---------------------|")
+		stats[i].Name = *repos[i].Name
 
-		pulls := pullRequestsList(repos[i])
+		closed_pr := 0
+		cont := true
+		for page := 1; cont; page++ {
+			fmt.Print(".")
+			pulls := pullRequestsList(repos[i], page)
 
-		for j := 0; j < len(pulls); j++ {
-			fmt.Printf("#%d - %s\n", *pulls[j].Number, *pulls[j].Title)
+			if len(pulls) > 0 {
+				closed_pr += len(pulls)
+			} else {
+				cont = false
+			}
 		}
 
+		stats[i].ClosedPullRequest = closed_pr
 	}
+
+	return stats
+}
+
+func formatOutput(stats []ReposStat) {
+	fmt.Print("\n")
+	for i := 0; i < len(stats); i++ {
+		fmt.Println("------------------------------------------")
+		fmt.Printf(" repo   : %s\n", stats[i].Name)
+		fmt.Printf(" open   : %d\n", stats[i].OpenPullRequest)
+		fmt.Printf(" closed : %d\n", stats[i].ClosedPullRequest)
+	}
+	fmt.Println("------------------------------------------")
+}
+
+func main() {
+	stats := statPullRequests()
+	formatOutput(stats)
 }
