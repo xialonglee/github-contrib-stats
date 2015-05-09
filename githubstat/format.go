@@ -17,7 +17,7 @@ func (f *Format) fieldOutput(field, value string) {
 	fmt.Printf("%s%s: %s\n", base, padding, value)
 }
 
-func (f *Format) FormatOutput(stats []ReposStat) {
+func (f *Format) FormatOutput(stats []Result) {
 	fmt.Print("\n")
 	for i := 0; i < len(stats); i++ {
 		f.separatorOutput()

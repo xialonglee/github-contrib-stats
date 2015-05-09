@@ -14,11 +14,13 @@ func orgRepositoriesList() []github.Repository {
 		},
 	}
 
-	client := client()
+	proxyClient := &ProxyClient{}
+	client := proxyClient.getClient()
 	repos, _, err := client.Repositories.ListByOrg(config.OrgName, opt)
 
 	if err != nil {
 		fmt.Println(err)
 	}
+
 	return repos
 }

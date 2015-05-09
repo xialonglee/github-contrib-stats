@@ -6,6 +6,7 @@ import (
 	"github.com/google/go-github/github"
 )
 
+// Pull Request List
 func pullRequestsList(repo github.Repository, page int) []github.PullRequest {
 	opt := &github.PullRequestListOptions{
 		State: "closed",
@@ -19,7 +20,8 @@ func pullRequestsList(repo github.Repository, page int) []github.PullRequest {
 		},
 	}
 
-	client := client()
+	proxyClient := &ProxyClient{}
+	client := proxyClient.getClient()
 	pr, _, err := client.PullRequests.List(*repo.Owner.Login, *repo.Name, opt)
 
 	if err != nil {
@@ -27,36 +29,4 @@ func pullRequestsList(repo github.Repository, page int) []github.PullRequest {
 	}
 
 	return pr
-}
-
-type ReposStat struct {
-	Name              string
-	ClosedPullRequest int
-	OpenPullRequest   int
-}
-
-func StatPullRequests() []ReposStat {
-	repos := orgRepositoriesList()
-	stats := make([]ReposStat, len(repos), len(repos))
-
-	for i := 0; i < len(repos); i++ {
-		stats[i].Name = *repos[i].Name
-
-		closed_pr := 0
-		cont := true
-		for page := 1; cont; page++ {
-			fmt.Print(".")
-			pulls := pullRequestsList(repos[i], page)
-
-			if len(pulls) > 0 {
-				closed_pr += len(pulls)
-			} else {
-				cont = false
-			}
-		}
-
-		stats[i].ClosedPullRequest = closed_pr
-	}
-
-	return stats
 }
