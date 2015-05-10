@@ -2,33 +2,41 @@ package main
 
 import (
 	"flag"
-	"fmt"
+	"strings"
 
 	"./githubstat"
-
-	"github.com/mgutz/ansi"
 )
 
 func main() {
 	// repository name
-	repoName := flag.String("repository", "github-stat-script", "e.g. yshnb")
-	ownerName := flag.String("owner", "yshnb", "")
-	check_metrics := flag.String("metrics", "", "available metrics: (issue|star|pull_request)")
+	ownerName := flag.String("owner", "", "e.g. yshnb")
+	repoName := flag.String("repository", "", "e.g. github-stat-script")
+	target_metrics := flag.String("metrics", "", "available metrics: (star)")
 
 	flag.Parse()
 
 	var metricsRequest githubstat.MetricsRequest
 
-	switch *check_metrics {
+	switch *target_metrics {
 	case "issue":
-		//		metricsRequest = &githubstat.IssueMetricsRequest{}
+		metricsRequest = &githubstat.IssueMetricsRequest{}
 	case "star":
 		metricsRequest = &githubstat.StarMetricsRequest{}
 	case "pull_request":
-		//		metricsRequest = &githubstat.PullRequestMetricsRequest{}
+		metricsRequest = &githubstat.PullRequestMetricsRequest{}
 	default:
-		fmt.Println(ansi.Color("you must select available metrics at least one.", "red"))
-		metricsRequest = &githubstat.StarMetricsRequest{}
+		metricsRequest = &githubstat.DefaultMetricsRequest{}
+	}
+
+	parameters := flag.Args()
+	if len(parameters) > 0 {
+		repo := strings.Split(parameters[0], "/")
+		if *ownerName == "" && repo[0] != "" {
+			ownerName = &repo[0]
+		}
+		if *repoName == "" && repo[1] != "" {
+			repoName = &repo[1]
+		}
 	}
 
 	metricsRequest.SetParameters(&githubstat.MetricsParameters{
@@ -37,11 +45,4 @@ func main() {
 	})
 	metrics := metricsRequest.FetchMetrics()
 	metrics.GetMetrics()
-
-	//	marshaling, _ := json.Marshal(metrics)
-	//	fmt.Println(string(marshaling))
-	//
-	//	stats := githubstat.StatPullRequests()
-	//	format := &githubstat.Format{}
-	//	format.FormatOutput(stats)
 }
