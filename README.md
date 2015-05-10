@@ -1,12 +1,13 @@
-# github-stat-script
+# github-stat
 
 tutorial for myself to write in golang and to use [go-github](https://github.com/google/go-github)
 
 ## Usage
 
-1. `git clone https://github.com/yshnb/github-stat-script.git`
-2. `cd ./github-stat-script`
-3. fill in valid `accessToken` from Github
+1. `git clone https://github.com/yshnb/github-stat.git`
+2. `cd ./github-stat`
+3. `cp config.json.dist config.json`
+4. fill in valid `accessToken` generated in Github
 
 After, you can run the below command
 ```
