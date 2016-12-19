@@ -1,7 +1,7 @@
 # github-contrib-stats
 
-this repository is originally forked from https://github.com/yshnb/github-stat, this repo does different jobs.
-this repo does statistics analysis of the numbers of merged/LGTM'ed/NonLGTM'ed(open) PRs in specified repos for specified user(s) 
+this repository is originally forked from https://github.com/yshnb/github-stat but with different design purpose.
+except statistics analysis of the numbers of merged/LGTM'ed/NonLGTM'ed(open) PRs in specified repos for specified user(s) , lots of other features are planed.
 
 ## Usage
 
