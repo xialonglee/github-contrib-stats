@@ -1,7 +1,0 @@
-statBeginTime = 2016-10-01T00:00:00
-accessToken = "0161c6ec49fb95d2d04550c72965dd55921bb775"
-users = ["bruceauyeung","tanshanshan"]
-repos = ["kubernetes/*"]
-metrics = "pr"
-
-

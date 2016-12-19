@@ -12,7 +12,7 @@ except statistics analysis of the numbers of merged/LGTM'ed/NonLGTM'ed(open) PRs
 5. `git clone https://github.com/yshnb/github-stat.git`
 6. `cd ./github-stat`
 7. `cp config.toml.dist config.toml`
-8. fill in valid `accessToken` generated from https://github.com/settings/tokens
+8. fill in valid `accessToken` generated from https://github.com/settings/tokens (make sure **repo** scope is checked)
 9. fill in other fields.
 
 After, you can run the below command
