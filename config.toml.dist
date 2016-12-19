@@ -1,0 +1,7 @@
+statBeginTime = 2016-10-01T00:00:00
+accessToken = "personal access token"
+users = ["bruceauyeung","tanshanshan"]
+repos = ["kubernetes/*"]
+metrics = "pr"
+
+

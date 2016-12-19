@@ -1,31 +1,29 @@
-# github-stat
+# github-contrib-stats
 
-tutorial for myself to write in golang and to use [go-github](https://github.com/google/go-github)
+this repository is originally forked from https://github.com/yshnb/github-stat, this repo does different jobs.
+this repo does statistics analysis of the numbers of merged/LGTM'ed/NonLGTM'ed(open) PRs in specified repos for specified user(s) 
 
 ## Usage
 
-1. `git clone https://github.com/yshnb/github-stat.git`
-2. `cd ./github-stat`
-3. `cp config.json.dist config.json`
-4. fill in valid `accessToken` generated in Github
+1. `go get -u github.com/google/go-github/github`
+2. `go get -u github.com/mgutz/ansi`
+3. `go get -u golang.org/x/oauth2`
+4. `go get -u github.com/olekukonko/tablewriter`
+5. `git clone https://github.com/yshnb/github-stat.git`
+6. `cd ./github-stat`
+7. `cp config.toml.dist config.toml`
+8. fill in valid `accessToken` generated from https://github.com/settings/tokens
+9. fill in other fields.
 
 After, you can run the below command
 ```
-$ go run main.go --metrics=star google/go-github
-target repository: google/go-github
-metrics: star
-star: 1079
+$ go run main.go
+......
++--------------+--------+---------+------------+
+|     NAME     | MERGED | LGTM'ED | NONLGTM'ED |
++--------------+--------+---------+------------+
+| bruceauyeung |     10 |       0 |          6 |
+| tanshanshan  |      8 |       0 |          6 |
++--------------+--------+---------+------------+
 ```
 like this.
-
-## Available metrics
-
-For now, it can only get the numbers of github star in each repository.
-
-My plan ....
-
-- issue
-- pull_requests (open/closed)
-- code changes(additions/deletions)
-- etc.
-

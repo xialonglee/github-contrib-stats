@@ -1,13 +1,9 @@
 package githubstat
 
-import (
-	"fmt"
-
-	"github.com/mgutz/ansi"
-)
+import "fmt"
 
 type Metrics interface {
-	GetMetrics()
+	Show()
 }
 
 type MetricsRequest interface {
@@ -19,21 +15,23 @@ type MetricsRequest interface {
 
 // metrics parameters
 type MetricsParameters struct {
-	OrgName   *string
+	Repos     []*RepoParameters
+	Dimension *string
+}
+type RepoParameters struct {
 	OwnerName *string
 	RepoName  *string
 }
-
 type DefaultMetrics struct{}
 
 type DefaultMetricsRequest struct{}
 
-func (m *DefaultMetrics) GetMetrics() {
+func (m *DefaultMetrics) Show() {
 	// void
 }
 
 func (m *DefaultMetricsRequest) express() {
-	fmt.Println(ansi.Color("you must select available metrics at least one.", "yellow"))
+	fmt.Println("you must select available metrics at least one.")
 }
 
 func (m *DefaultMetricsRequest) validate() bool {

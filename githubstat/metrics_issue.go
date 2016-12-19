@@ -1,17 +1,13 @@
 package githubstat
 
-import (
-	"fmt"
-
-	"github.com/mgutz/ansi"
-)
+import "fmt"
 
 type IssueMetrics struct {
 	issue int
 }
 
-func (m *IssueMetrics) GetMetrics() {
-	fmt.Printf(ansi.Color("this metrics has not been implemented yet.", "red"))
+func (m *IssueMetrics) Show() {
+	fmt.Printf("this metrics has not been implemented yet.")
 }
 
 type IssueMetricsRequest struct {
@@ -19,7 +15,7 @@ type IssueMetricsRequest struct {
 }
 
 func (m *IssueMetricsRequest) express() {
-	fmt.Printf("target repository: %s/%s\n", *m.param.OwnerName, *m.param.RepoName)
+	//fmt.Printf("target repository: %s/%s\n", *m.param.OwnerName, *m.param.RepoName)
 	fmt.Println("metrics: issue count")
 }
 

@@ -2,47 +2,51 @@ package main
 
 import (
 	"flag"
+	"fmt"
 	"strings"
 
 	"./githubstat"
 )
 
 func main() {
-	// repository name
-	ownerName := flag.String("owner", "", "e.g. yshnb")
-	repoName := flag.String("repository", "", "e.g. github-stat-script")
-	target_metrics := flag.String("metrics", "", "available metrics: (star)")
-
+	flagMetrics := flag.String("metrics", "", "available metrics: (pr)")
+	dimension := flag.String("dimension", "", "available dimension: (overall)")
 	flag.Parse()
 
+	if flagMetrics == nil || *flagMetrics == "" {
+		flagMetrics = &githubstat.Config.Metrics
+		if flagMetrics == nil || *flagMetrics == "" {
+			fmt.Println("metrics not specified.")
+		}
+	}
 	var metricsRequest githubstat.MetricsRequest
-
-	switch *target_metrics {
+	var metricsParameters githubstat.MetricsParameters
+	metricsParameters.Dimension = dimension
+	switch *flagMetrics {
 	case "issue":
 		metricsRequest = &githubstat.IssueMetricsRequest{}
-	case "star":
-		metricsRequest = &githubstat.StarMetricsRequest{}
-	case "pull_request":
+	case "pr":
 		metricsRequest = &githubstat.PullRequestMetricsRequest{}
 	default:
 		metricsRequest = &githubstat.DefaultMetricsRequest{}
 	}
 
 	parameters := flag.Args()
-	if len(parameters) > 0 {
-		repo := strings.Split(parameters[0], "/")
-		if *ownerName == "" && repo[0] != "" {
-			ownerName = &repo[0]
+
+	if len(parameters) == 0 {
+		parameters = githubstat.Config.Repos
+
+	}
+	for _, repoStr := range parameters {
+		repo := strings.Split(repoStr, "/")
+		if len(repo) != 2 {
+			fmt.Printf("invalid repository name : %s, must be of format 'ownername/reponame'\n", repoStr)
 		}
-		if *repoName == "" && repo[1] != "" {
-			repoName = &repo[1]
-		}
+		metricsParameters.Repos = append(metricsParameters.Repos,
+			&githubstat.RepoParameters{&repo[0], &repo[1]})
 	}
 
-	metricsRequest.SetParameters(&githubstat.MetricsParameters{
-		OwnerName: ownerName,
-		RepoName:  repoName,
-	})
+	metricsRequest.SetParameters(&metricsParameters)
 	metrics := metricsRequest.FetchMetrics()
-	metrics.GetMetrics()
+	metrics.Show()
 }

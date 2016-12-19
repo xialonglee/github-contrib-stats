@@ -22,7 +22,7 @@ func (t *tokenSource) Token() (*oauth2.Token, error) {
 func (c *ProxyClient) getClient() *github.Client {
 	if nil == c.client {
 		ts := &tokenSource{
-			&oauth2.Token{AccessToken: config.AccessToken},
+			&oauth2.Token{AccessToken: Config.AccessToken},
 		}
 
 		tc := oauth2.NewClient(oauth2.NoContext, ts)

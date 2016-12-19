@@ -1,26 +1,28 @@
 package githubstat
 
 import (
-	"encoding/json"
-	"io/ioutil"
+	"time"
+
+	"github.com/BurntSushi/toml"
 )
 
 type Load interface {
 }
 
-var config Config
+var Config Configuration
 
-type Config struct {
-	AccessToken string
-	OrgName     string
+type Configuration struct {
+	StatBeginTime time.Time
+	AccessToken   string
+	Users         []string
+	Repos         []string
+	Metrics       string
 }
 
 // read config file
 var _ = func() int {
-	file, err := ioutil.ReadFile("./config.json")
-	if err != nil {
+	if _, err := toml.DecodeFile("./config.toml", &Config); err != nil {
 		panic(err)
 	}
-	json.Unmarshal(file, &config)
 	return 0
 }()
