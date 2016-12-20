@@ -262,7 +262,7 @@ func (m *PullRequestMetricsRequest) FetchMetrics() Metrics {
 				lenLGTMed := len(lgtmedPRs)
 				lenNonLGTMed := len(nonLGTMedPRs)
 				fmt.Printf("Merged: %d, LGTM'ed: %d, NonLGTM'ed: %d \n",
-					ownerName, repoName, lenMergedPRs, lenLGTMed, lenNonLGTMed)
+					lenMergedPRs, lenLGTMed, lenNonLGTMed)
 
 				metrics.Overall = append(metrics.Overall, &PullRequestMetrics{
 					User:      user,
