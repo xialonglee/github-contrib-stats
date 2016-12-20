@@ -12,12 +12,15 @@ except statistics analysis of the numbers of merged/LGTM'ed/NonLGTM'ed(open) PRs
 5. `git clone https://github.com/bruceauyeung/github-contrib-stats`
 6. `cd ./github-contrib-stats`
 7. `cp config.toml.dist config.toml`
-8. fill in valid `accessToken` generated from https://github.com/settings/tokens (make sure **repo** scope is checked)
-9. fill in other fields.
+8. fill in `accessToken` field in `config.toml`, you can generate one from https://github.com/settings/tokens (make sure **repo** scope is checked)
+9. fill in other fields in `config.toml`.
 
 After, you can run the below command
 ```
 $ go run main.go
+```
+the outputs may look like the following:
+```
 metrics: pull request stat analysis
 kubernetes/charts : listing open pull requests
 kubernetes/charts : listing closed pull requests
@@ -29,4 +32,3 @@ kubernetes/charts : listing closed pull requests
 | tanshanshan  |      8 |       0 |          6 |
 +--------------+--------+---------+------------+
 ```
-like this.
