@@ -16,10 +16,11 @@ type OverallPullRequestMetrics struct {
 	Overall []*PullRequestMetrics
 }
 type PullRequestMetrics struct {
-	User      string
-	Merged    int // already merged PRs, PRs of this kind are also closed
-	LGTMed    int // open PRs with LGTM label
-	NonLGTMed int //open PRs without LGTM label
+	User          string
+	Merged        int // already merged PRs, PRs of this kind are also closed
+	MergedCommits int // the sum of commits number in merged PRs
+	LGTMed        int // open PRs with LGTM label
+	NonLGTMed     int //open PRs without LGTM label
 }
 
 func (m *OverallPullRequestMetrics) merge() {
@@ -31,6 +32,7 @@ func (m *OverallPullRequestMetrics) merge() {
 		if i, found := mapping[metrics.User]; found {
 			prm := merged[i]
 			prm.Merged += metrics.Merged
+			prm.MergedCommits += metrics.MergedCommits
 			prm.LGTMed += metrics.LGTMed
 			prm.NonLGTMed += metrics.NonLGTMed
 		} else {
@@ -45,12 +47,12 @@ func (m *OverallPullRequestMetrics) Show() {
 	m.merge()
 	data := [][]string{}
 	for _, metrics := range m.Overall {
-		r := []string{metrics.User, strconv.Itoa(metrics.Merged), strconv.Itoa(metrics.LGTMed), strconv.Itoa(metrics.NonLGTMed)}
+		r := []string{metrics.User, strconv.Itoa(metrics.Merged), strconv.Itoa(metrics.MergedCommits), strconv.Itoa(metrics.LGTMed), strconv.Itoa(metrics.NonLGTMed)}
 		data = append(data, r)
 	}
 	if len(data) != 0 {
 		table := tablewriter.NewWriter(os.Stdout)
-		table.SetHeader([]string{"Name", "Merged", "LGTM'ed", "NonLGTM'ed"})
+		table.SetHeader([]string{"User Name", "Merged PRs", "Merged Commits", "LGTM'ed PRs", "NonLGTM'ed PRs"})
 
 		for _, v := range data {
 			table.Append(v)
@@ -84,21 +86,37 @@ func (m *PullRequestMetricsRequest) validate() bool {
 
 	return true
 }
+func getPullRequestCommits(client *github.Client, owner string, repo string, number int) (int, error) {
 
+	pr, _, err := client.PullRequests.Get(owner, repo, number)
+	if err != nil {
+		return -1, err
+	}
+	return *pr.Commits, nil
+}
+func getPullRequest(client *github.Client, owner string, repo string, number int) (*github.PullRequest, error) {
+
+	pr, _, err := client.PullRequests.Get(owner, repo, number)
+	if err != nil {
+		return nil, err
+	}
+	return pr, nil
+}
 func listPullRequests(client *github.Client, owner string, repo string, opt *github.PullRequestListOptions) ([]*github.PullRequest, error) {
 	var allPRs []*github.PullRequest
+	page := 1
 	for {
 		prs, resp, err := client.PullRequests.List(owner, repo, opt)
 		if err != nil {
 			return nil, err
 		}
 		allPRs = append(allPRs, prs...)
-		//fmt.Println(prs[len(prs)-1].CreatedAt)
+		fmt.Printf("page:%d fin\n", page)
 		if resp.NextPage == 0 || prs[len(prs)-1].CreatedAt.Before(Config.StatBeginTime) {
 			break
 		}
 		opt.ListOptions.Page = resp.NextPage
-		fmt.Printf("page:%d fin\n", resp.NextPage-1)
+		page++
 	}
 	return allPRs, nil
 }
@@ -207,6 +225,15 @@ func (m *PullRequestMetricsRequest) expandRepos(client *github.Client) {
 
 	m.param.Repos = expanded
 }
+func sumCommits(prs []*github.PullRequest) int {
+	var sum int
+	for _, pr := range prs {
+		if pr.Commits != nil && *pr.Commits >= 0 {
+			sum += *pr.Commits
+		}
+	}
+	return sum
+}
 func (m *PullRequestMetricsRequest) FetchMetrics() Metrics {
 
 	m.express()
@@ -251,6 +278,11 @@ func (m *PullRequestMetricsRequest) FetchMetrics() Metrics {
 				for _, pr := range filteredClosedPRs {
 					// Merged is always nil but MergedAt is not.
 					if pr.MergedAt != nil {
+						//get the specified pull request to fill in all other blank fields (such as Commits field)
+						pr, err := getPullRequest(client, ownerName, repoName, *pr.Number)
+						if err != nil {
+							panic(err)
+						}
 						mergedPRs = append(mergedPRs, pr)
 					}
 				}
@@ -259,16 +291,17 @@ func (m *PullRequestMetricsRequest) FetchMetrics() Metrics {
 				}
 
 				lenMergedPRs := len(mergedPRs)
-				lenLGTMed := len(lgtmedPRs)
+				lenLGTMedPRs := len(lgtmedPRs)
 				lenNonLGTMed := len(nonLGTMedPRs)
-				fmt.Printf("Merged: %d, LGTM'ed: %d, NonLGTM'ed: %d \n",
-					lenMergedPRs, lenLGTMed, lenNonLGTMed)
+				fmt.Printf("User: %s, Merged: %d, LGTM'ed: %d, NonLGTM'ed: %d \n",
+					user, lenMergedPRs, lenLGTMedPRs, lenNonLGTMed)
 
 				metrics.Overall = append(metrics.Overall, &PullRequestMetrics{
-					User:      user,
-					Merged:    lenMergedPRs,
-					LGTMed:    lenLGTMed,
-					NonLGTMed: lenNonLGTMed,
+					User:          user,
+					Merged:        lenMergedPRs,
+					MergedCommits: sumCommits(mergedPRs),
+					LGTMed:        lenLGTMedPRs,
+					NonLGTMed:     lenNonLGTMed,
 				})
 
 			}
@@ -279,9 +312,11 @@ func (m *PullRequestMetricsRequest) FetchMetrics() Metrics {
 	return &OverallPullRequestMetrics{
 		[]*PullRequestMetrics{
 			&PullRequestMetrics{
-				Merged:    -1,
-				LGTMed:    -1,
-				NonLGTMed: -1,
+				User:          "",
+				Merged:        -1,
+				MergedCommits: -1,
+				LGTMed:        -1,
+				NonLGTMed:     -1,
 			},
 		},
 	}
