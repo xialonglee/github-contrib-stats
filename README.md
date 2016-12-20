@@ -25,10 +25,10 @@ metrics: pull request stat analysis
 kubernetes/charts : listing open pull requests
 kubernetes/charts : listing closed pull requests
  ......(some outputs ignored)
-+--------------+--------+---------+------------+
-|     NAME     | MERGED | LGTM'ED | NONLGTM'ED |
-+--------------+--------+---------+------------+
-| bruceauyeung |     10 |       0 |          6 |
-| tanshanshan  |      8 |       0 |          6 |
-+--------------+--------+---------+------------+
++--------------+------------+----------------+-------------+----------------+
+|  USER NAME   | MERGED PRS | MERGED COMMITS | LGTM'ED PRS | NONLGTM'ED PRS |
++--------------+------------+----------------+-------------+----------------+
+| bruceauyeung |         10 |             11 |           0 |              6 |
+| tanshanshan  |          8 |              8 |           0 |              7 |
++--------------+------------+----------------+-------------+----------------+
 ```
