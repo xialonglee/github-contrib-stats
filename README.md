@@ -9,8 +9,8 @@ except statistics analysis of the numbers of merged/LGTM'ed/NonLGTM'ed(open) PRs
 2. `go get -u github.com/mgutz/ansi`
 3. `go get -u golang.org/x/oauth2`
 4. `go get -u github.com/olekukonko/tablewriter`
-5. `git clone https://github.com/yshnb/github-stat.git`
-6. `cd ./github-stat`
+5. `git clone https://github.com/bruceauyeung/github-contrib-stats`
+6. `cd ./github-contrib-stats`
 7. `cp config.toml.dist config.toml`
 8. fill in valid `accessToken` generated from https://github.com/settings/tokens (make sure **repo** scope is checked)
 9. fill in other fields.
@@ -18,7 +18,10 @@ except statistics analysis of the numbers of merged/LGTM'ed/NonLGTM'ed(open) PRs
 After, you can run the below command
 ```
 $ go run main.go
-......
+metrics: pull request stat analysis
+kubernetes/charts : listing open pull requests
+kubernetes/charts : listing closed pull requests
+ ......(some outputs ignored)
 +--------------+--------+---------+------------+
 |     NAME     | MERGED | LGTM'ED | NONLGTM'ED |
 +--------------+--------+---------+------------+
