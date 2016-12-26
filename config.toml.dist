@@ -1,7 +1,21 @@
+# begin time of statistics period
 statBeginTime = 2016-10-01T00:00:00
 accessToken = "personal access token"
-users = ["bruceauyeung","tanshanshan"]
+
+# repositories in which Pull Requests / Commits are analyzed
 repos = ["kubernetes/*"]
 metrics = "pr"
 
+# statistics by "week", "overall" or "all"; "all" means "week" and "overall"
+dimension = "all"
 
+# Sunday:0; Monday:1; Tuesday:2; Wednesday:3; Thursday:4; Friday:5; Saturday:6
+weekFirstDay=6
+
+[[users]]
+name = "bruceauyeung" # github user names who contribute to the specified repositories.
+stackalyticsDeviation = 1
+
+[[users]]
+name = "tanshanshan"
+stackalyticsDeviation = 0

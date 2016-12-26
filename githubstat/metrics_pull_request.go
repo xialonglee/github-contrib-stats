@@ -3,6 +3,7 @@ package githubstat
 import (
 	"fmt"
 	"os"
+	"time"
 
 	"strings"
 
@@ -12,54 +13,152 @@ import (
 	"github.com/olekukonko/tablewriter"
 )
 
+type AllPullRequestMetrics struct {
+	*WeekPullRequestMetrics
+	*OverallPullRequestMetrics
+}
+
+func (a *AllPullRequestMetrics) Show() {
+	a.WeekPullRequestMetrics.Show()
+	a.OverallPullRequestMetrics.Show()
+}
+
+type WeekPullRequestMetrics struct {
+	Week []*PullRequestMetrics
+}
+
+func (w *WeekPullRequestMetrics) merge() {
+
+	w.Week = merge(w.Week)
+
+}
+func (w *WeekPullRequestMetrics) Show() {
+	w.merge()
+	data := [][]string{}
+	var totalMerged int
+	var totalMergedCommits int
+	var totalLGTMed int
+	var totalNonLGTMed int
+	var totalCreated int
+
+	for _, metrics := range w.Week {
+		r := []string{metrics.User, strconv.Itoa(metrics.Merged),
+			strconv.Itoa(metrics.MergedCommits), strconv.Itoa(metrics.LGTMed),
+			strconv.Itoa(metrics.NonLGTMed), strconv.Itoa(metrics.Created)}
+		data = append(data, r)
+		totalMerged += metrics.Merged
+		totalMergedCommits += metrics.MergedCommits
+		totalLGTMed += metrics.LGTMed
+		totalNonLGTMed += metrics.NonLGTMed
+		totalCreated += metrics.Created
+
+	}
+	if len(data) != 0 {
+		table := tablewriter.NewWriter(os.Stdout)
+		fmt.Print("\nStatistics Per Week\n")
+		table.SetHeader([]string{"User Name", "Merged PRs", "Merged Commits",
+			"LGTM'ed PRs", "NonLGTM'ed PRs", "Created PRs"})
+		table.AppendBulk(data)
+		table.Append([]string{
+			"Total",
+			strconv.Itoa(totalMerged),
+			strconv.Itoa(totalMergedCommits),
+			strconv.Itoa(totalLGTMed),
+			strconv.Itoa(totalNonLGTMed),
+			strconv.Itoa(totalCreated)},
+		)
+		table.Render() // Send output
+	}
+}
+
 type OverallPullRequestMetrics struct {
 	Overall []*PullRequestMetrics
 }
 type PullRequestMetrics struct {
-	User          string
-	Merged        int // already merged PRs, PRs of this kind are also closed
-	MergedCommits int // the sum of commits number in merged PRs
-	LGTMed        int // open PRs with LGTM label
-	NonLGTMed     int //open PRs without LGTM label
+	User                  string
+	Merged                int // already merged PRs, PRs of this kind are also closed
+	MergedCommits         int // the sum of commits number in merged PRs
+	DeviatedMergedCommits int // stackalytics.com also do statistics analysis on kubernetes commits, but shamefully incorrectly. for report purpose, we calculate these through stackalyticsDeviation
+	LGTMed                int // open PRs with LGTM label
+	NonLGTMed             int //open PRs without LGTM label
+	Created               int // created PRs including all open PRs and all merged closed PRs
 }
 
 func (m *OverallPullRequestMetrics) merge() {
 
+	m.Overall = merge(m.Overall)
+
+}
+
+func (m *OverallPullRequestMetrics) deviate() {
+	for _, metrics := range m.Overall {
+		metrics.DeviatedMergedCommits = metrics.MergedCommits + getStackalyticsDeviation(metrics.User)
+	}
+}
+func (m *OverallPullRequestMetrics) Show() {
+	m.merge()
+	m.deviate()
+	data := [][]string{}
+	var totalMerged int
+	var totalMergedCommits int
+	var totalDeviatedMergedCommits int
+	var totalLGTMed int
+	var totalNonLGTMed int
+	for _, metrics := range m.Overall {
+		var mergedCommits string
+		mergedCommits = fmt.Sprintf("%d / %d", metrics.MergedCommits, metrics.DeviatedMergedCommits)
+		r := []string{metrics.User, strconv.Itoa(metrics.Merged), mergedCommits, strconv.Itoa(metrics.LGTMed), strconv.Itoa(metrics.NonLGTMed)}
+		data = append(data, r)
+		totalMerged += metrics.Merged
+		totalMergedCommits += metrics.MergedCommits
+		totalDeviatedMergedCommits += metrics.DeviatedMergedCommits
+		totalLGTMed += metrics.LGTMed
+		totalNonLGTMed += metrics.NonLGTMed
+	}
+	if len(data) != 0 {
+		table := tablewriter.NewWriter(os.Stdout)
+		fmt.Print("\nOverall Statistics\n")
+		mergedCommitsHeader := "Merged Commits(actual/stack)"
+		table.SetHeader([]string{"User Name", "Merged PRs", mergedCommitsHeader, "LGTM'ed PRs", "NonLGTM'ed PRs"})
+		table.AppendBulk(data)
+		table.Append([]string{
+			"Total",
+			strconv.Itoa(totalMerged),
+			fmt.Sprintf("%d / %d", totalMergedCommits, totalDeviatedMergedCommits),
+			strconv.Itoa(totalLGTMed),
+			strconv.Itoa(totalNonLGTMed),
+		})
+		table.Render() // Send output
+	}
+
+}
+func getStackalyticsDeviation(userName string) int {
+	for _, u := range Config.Users {
+		if u.Name == userName {
+			return u.StackalyticsDeviation
+		}
+	}
+	return 0
+}
+func merge(toBeMerged []*PullRequestMetrics) []*PullRequestMetrics {
 	// user name to slice index of the first occurence of user's metrics
 	mapping := make(map[string]int)
 	var merged []*PullRequestMetrics
-	for _, metrics := range m.Overall {
+	for _, metrics := range toBeMerged {
 		if i, found := mapping[metrics.User]; found {
 			prm := merged[i]
 			prm.Merged += metrics.Merged
 			prm.MergedCommits += metrics.MergedCommits
 			prm.LGTMed += metrics.LGTMed
 			prm.NonLGTMed += metrics.NonLGTMed
+			prm.Created += metrics.Created
 		} else {
 			mapping[metrics.User] = len(merged)
 			merged = append(merged, metrics)
 		}
 	}
-	m.Overall = merged
 
-}
-func (m *OverallPullRequestMetrics) Show() {
-	m.merge()
-	data := [][]string{}
-	for _, metrics := range m.Overall {
-		r := []string{metrics.User, strconv.Itoa(metrics.Merged), strconv.Itoa(metrics.MergedCommits), strconv.Itoa(metrics.LGTMed), strconv.Itoa(metrics.NonLGTMed)}
-		data = append(data, r)
-	}
-	if len(data) != 0 {
-		table := tablewriter.NewWriter(os.Stdout)
-		table.SetHeader([]string{"User Name", "Merged PRs", "Merged Commits", "LGTM'ed PRs", "NonLGTM'ed PRs"})
-
-		for _, v := range data {
-			table.Append(v)
-		}
-		table.Render() // Send output
-	}
-
+	return merged
 }
 
 type PullRequestMetricsRequest struct {
@@ -170,6 +269,32 @@ func getPullRequestLabelNames(client *github.Client, owner string, repo string, 
 	return labelNames
 
 }
+func getPullRequestLatestLGTMEvent(client *github.Client, owner string, repo string, number int) (*github.IssueEvent, error) {
+	//var allEvents []*github.IssueEvent
+	page := 1
+	opt := &github.ListOptions{PerPage: 100}
+	for {
+		events, resp, err := client.Issues.ListIssueEvents(owner, repo, number, opt)
+		if err != nil {
+			return nil, err
+		}
+		for _, evt := range events {
+			//fmt.Printf("event created at : %v", evt.CreatedAt)
+			if *evt.Event == "labeled" && *evt.Label.Name == "lgtm" {
+				return evt, nil
+			}
+		}
+		//allEvents = append(allEvents, events...)
+		fmt.Printf("page:%d fin\n", page)
+		if resp.NextPage == 0 || events[len(events)-1].CreatedAt.Before(Config.StatBeginTime) {
+			break
+		}
+		opt.Page = resp.NextPage
+		page++
+	}
+	return nil, fmt.Errorf("no LGTM event found")
+
+}
 func isLGTMed(client *github.Client, owner string, repo string, number int) bool {
 	lnames := getPullRequestLabelNames(client, owner, repo, number)
 	if StringSliceContainsFold(lnames, "lgtm") {
@@ -234,6 +359,14 @@ func sumCommits(prs []*github.PullRequest) int {
 	}
 	return sum
 }
+func inThisWeek(t *time.Time) bool {
+	if t.Year() >= Config.ThisWeekFirstDay.Year() &&
+		t.Month() >= Config.ThisWeekFirstDay.Month() &&
+		t.Day() >= Config.ThisWeekFirstDay.Day() {
+		return true
+	}
+	return false
+}
 func (m *PullRequestMetricsRequest) FetchMetrics() Metrics {
 
 	m.express()
@@ -241,7 +374,10 @@ func (m *PullRequestMetricsRequest) FetchMetrics() Metrics {
 	proxyClient := &ProxyClient{}
 	client := proxyClient.getClient()
 	if m.validate() {
-		var metrics OverallPullRequestMetrics
+
+		var metrics OverallPullRequestMetrics = OverallPullRequestMetrics{Overall: []*PullRequestMetrics{}}
+		var weekMetrics WeekPullRequestMetrics = WeekPullRequestMetrics{Week: []*PullRequestMetrics{}}
+		var all AllPullRequestMetrics = AllPullRequestMetrics{WeekPullRequestMetrics: &weekMetrics, OverallPullRequestMetrics: &metrics}
 		m.expandRepos(client)
 
 		for _, repo := range m.param.Repos {
@@ -261,17 +397,39 @@ func (m *PullRequestMetricsRequest) FetchMetrics() Metrics {
 			}
 
 			for _, user := range Config.Users {
-				var mergedPRs []*github.PullRequest
-				var lgtmedPRs []*github.PullRequest
-				var nonLGTMedPRs []*github.PullRequest
-				filteredOpenPRs := filterByUserName(openPRs, user)
-				filteredClosedPRs := filterByUserName(closedPRs, user)
+				var overallMergedPRs []*github.PullRequest
+				var overallLGTMedPRs []*github.PullRequest
+				var overallNonLGTMedPRs []*github.PullRequest
+				var weekMergedPRs []*github.PullRequest
+				var weekLGTMedPRs []*github.PullRequest
+				var weekNonLGTMedPRs []*github.PullRequest
+				var weekCreatedPRs []*github.PullRequest
+				userName := user.Name
+
+				filteredOpenPRs := filterByUserName(openPRs, userName)
+				filteredClosedPRs := filterByUserName(closedPRs, userName)
 
 				for _, pr := range filteredOpenPRs {
+					if inThisWeek(pr.CreatedAt) {
+						weekCreatedPRs = append(weekCreatedPRs, pr)
+					}
 					if isLGTMed(client, ownerName, repoName, *pr.Number) {
-						lgtmedPRs = append(lgtmedPRs, pr)
+						overallLGTMedPRs = append(overallLGTMedPRs, pr)
+
+						if event, err := getPullRequestLatestLGTMEvent(client, ownerName, repoName, *pr.Number); err != nil {
+							panic(err)
+						} else {
+
+							if inThisWeek(event.CreatedAt) {
+								weekLGTMedPRs = append(weekLGTMedPRs, pr)
+							}
+						}
+
 					} else {
-						nonLGTMedPRs = append(nonLGTMedPRs, pr)
+						overallNonLGTMedPRs = append(overallNonLGTMedPRs, pr)
+						if inThisWeek(pr.CreatedAt) {
+							weekNonLGTMedPRs = append(weekNonLGTMedPRs, pr)
+						}
 					}
 				}
 
@@ -283,42 +441,73 @@ func (m *PullRequestMetricsRequest) FetchMetrics() Metrics {
 						if err != nil {
 							panic(err)
 						}
-						mergedPRs = append(mergedPRs, pr)
+						overallMergedPRs = append(overallMergedPRs, pr)
+						if inThisWeek(pr.MergedAt) {
+							weekMergedPRs = append(weekMergedPRs, pr)
+							//fmt.Printf("pr title: %s, \npr merged at :%v\n", *pr.Title, *pr.MergedAt)
+						}
+						if inThisWeek(pr.CreatedAt) {
+							weekCreatedPRs = append(weekCreatedPRs, pr)
+						}
 					}
 				}
-				if metrics.Overall == nil {
-					metrics.Overall = []*PullRequestMetrics{}
-				}
 
-				lenMergedPRs := len(mergedPRs)
-				lenLGTMedPRs := len(lgtmedPRs)
-				lenNonLGTMed := len(nonLGTMedPRs)
-				fmt.Printf("User: %s, Merged: %d, LGTM'ed: %d, NonLGTM'ed: %d \n",
-					user, lenMergedPRs, lenLGTMedPRs, lenNonLGTMed)
+				lenMergedPRs := len(overallMergedPRs)
+				lenLGTMedPRs := len(overallLGTMedPRs)
+				lenNonLGTMed := len(overallNonLGTMedPRs)
+				//fmt.Printf("User: %s, Merged: %d, LGTM'ed: %d, NonLGTM'ed: %d \n",
+				//	user, lenMergedPRs, lenLGTMedPRs, lenNonLGTMed)
 
 				metrics.Overall = append(metrics.Overall, &PullRequestMetrics{
-					User:          user,
+					User:          userName,
 					Merged:        lenMergedPRs,
-					MergedCommits: sumCommits(mergedPRs),
+					MergedCommits: sumCommits(overallMergedPRs),
 					LGTMed:        lenLGTMedPRs,
 					NonLGTMed:     lenNonLGTMed,
+					Created:       -1,
+				})
+
+				weekMetrics.Week = append(weekMetrics.Week, &PullRequestMetrics{
+					User:                  userName,
+					Merged:                len(weekMergedPRs),
+					MergedCommits:         sumCommits(weekMergedPRs),
+					DeviatedMergedCommits: -1,
+					LGTMed:                len(weekLGTMedPRs),
+					NonLGTMed:             len(weekNonLGTMedPRs),
+					Created:               len(weekCreatedPRs),
 				})
 
 			}
 		}
 
-		return &metrics
+		return &all
 	}
-	return &OverallPullRequestMetrics{
-		[]*PullRequestMetrics{
-			&PullRequestMetrics{
-				User:          "",
-				Merged:        -1,
-				MergedCommits: -1,
-				LGTMed:        -1,
-				NonLGTMed:     -1,
+	return &AllPullRequestMetrics{
+		OverallPullRequestMetrics: &OverallPullRequestMetrics{
+			[]*PullRequestMetrics{
+				&PullRequestMetrics{
+					User:                  "",
+					Merged:                -1,
+					MergedCommits:         -1,
+					DeviatedMergedCommits: -1,
+					LGTMed:                -1,
+					NonLGTMed:             -1,
+					Created:               -1,
+				},
 			},
 		},
-	}
+		WeekPullRequestMetrics: &WeekPullRequestMetrics{
+			[]*PullRequestMetrics{
+				&PullRequestMetrics{
+					User:                  "",
+					Merged:                -1,
+					MergedCommits:         -1,
+					DeviatedMergedCommits: -1,
+					LGTMed:                -1,
+					NonLGTMed:             -1,
+					Created:               -1,
+				},
+			},
+		}}
 
 }
