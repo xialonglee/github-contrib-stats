@@ -297,18 +297,23 @@ func getPullRequestLatestLGTMEvent(client *github.Client, owner string, repo str
 }
 func isLGTMed(client *github.Client, owner string, repo string, number int) bool {
 	lnames := getPullRequestLabelNames(client, owner, repo, number)
-	if StringSliceContainsFold(lnames, "lgtm") {
+	if StringSliceContainsAnyFold(lnames, "LGTM", "Docs LGTM") {
 		return true
 	}
 	return false
 }
-func StringSliceContainsFold(s []string, str string) bool {
-	str = strings.ToUpper(str)
-	for _, e := range s {
-		if strings.ToUpper(e) == str {
-			return true
+func StringSliceContainsAnyFold(s []string, str ...string) bool {
+	if len(str) == 0 {
+		return false
+	}
+	for _, elem := range str {
+		for _, e := range s {
+			if strings.ToUpper(e) == strings.ToUpper(elem) {
+				return true
+			}
 		}
 	}
+
 	return false
 }
 func pullRequestOwnedBy(pr *github.PullRequest, userName string) bool {
