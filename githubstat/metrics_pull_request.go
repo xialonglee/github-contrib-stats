@@ -201,24 +201,6 @@ func getPullRequest(client *github.Client, owner string, repo string, number int
 	}
 	return pr, nil
 }
-func listPullRequests(client *github.Client, owner string, repo string, opt *github.PullRequestListOptions) ([]*github.PullRequest, error) {
-	var allPRs []*github.PullRequest
-	page := 1
-	for {
-		prs, resp, err := client.PullRequests.List(owner, repo, opt)
-		if err != nil {
-			return nil, err
-		}
-		allPRs = append(allPRs, prs...)
-		fmt.Printf("page:%d fin\n", page)
-		if resp.NextPage == 0 || prs[len(prs)-1].CreatedAt.Before(Config.StatBeginTime) {
-			break
-		}
-		opt.ListOptions.Page = resp.NextPage
-		page++
-	}
-	return allPRs, nil
-}
 
 func listRepositories(client *github.Client, owner string, opt *github.RepositoryListOptions) ([]*github.Repository, error) {
 	var allRepos []*github.Repository
@@ -239,17 +221,86 @@ func listRepositories(client *github.Client, owner string, opt *github.Repositor
 func listOpenPullRequests(client *github.Client, owner string, repo string) ([]*github.PullRequest, error) {
 	opt := &github.PullRequestListOptions{
 		ListOptions: github.ListOptions{PerPage: 100},
-		//Head:        client.userName + ":",
+		State:       "open",
+		Sort:        "created",
+		Direction:   "desc",
 	}
-	return listPullRequests(client, owner, repo, opt)
+	var allPRs []*github.PullRequest
+
+	page := 1
+loop:
+	for {
+		prs, resp, err := client.PullRequests.List(owner, repo, opt)
+		if err != nil {
+			return nil, err
+		}
+
+		fmt.Printf("page:%d fin\n", page)
+		for _, pr := range prs {
+			t := pr.CreatedAt
+			if !t.Before(Config.StatBeginTime) {
+				allPRs = append(allPRs, pr)
+			} else {
+				break loop
+			}
+		}
+
+		if resp.NextPage == 0 {
+			break
+		}
+		opt.ListOptions.Page = resp.NextPage
+		page++
+	}
+	return allPRs, nil
 }
 func listClosedPullRequests(client *github.Client, owner string, repo string) ([]*github.PullRequest, error) {
 	opt := &github.PullRequestListOptions{
 		ListOptions: github.ListOptions{PerPage: 100},
 		State:       "closed",
-		//Head:        client.userName + ":",
+		Sort:        "updated",
+		Direction:   "desc",
 	}
-	return listPullRequests(client, owner, repo, opt)
+
+	var allPRs []*github.PullRequest
+
+	page := 1
+
+loop:
+	for {
+		prs, resp, err := client.PullRequests.List(owner, repo, opt)
+		if err != nil {
+			return nil, err
+		}
+
+		fmt.Printf("page:%d fin\n", page)
+		for _, pr := range prs {
+			if pr.MergedAt == nil {
+				continue
+			}
+			t := pr.UpdatedAt
+
+			/*
+				MergedAt is always before UpdatedAt, so if a PR is updated before stat begin time,
+				this PR is absolutely merged before stat begin time.
+			*/
+			if !t.Before(Config.StatBeginTime) {
+				if !pr.MergedAt.Before(Config.StatBeginTime) {
+					allPRs = append(allPRs, pr)
+				}
+
+			} else {
+				break loop
+			}
+		}
+
+		if resp.NextPage == 0 {
+			break
+		}
+		opt.ListOptions.Page = resp.NextPage
+		page++
+	}
+
+	return allPRs, nil
 }
 func getIssue(client *github.Client, owner string, repo string, number int) *github.Issue {
 	issue, _, err := client.Issues.Get(owner, repo, number)
@@ -280,7 +331,7 @@ func getPullRequestLatestLGTMEvent(client *github.Client, owner string, repo str
 		}
 		for _, evt := range events {
 			//fmt.Printf("event created at : %v", evt.CreatedAt)
-			if *evt.Event == "labeled" && *evt.Label.Name == "lgtm" {
+			if *evt.Event == "labeled" && (strings.EqualFold(*evt.Label.Name, "LGTM") || strings.EqualFold(*evt.Label.Name, "Docs LGTM")) {
 				return evt, nil
 			}
 		}

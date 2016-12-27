@@ -42,7 +42,6 @@ func getWeekFirstDay(t time.Time) time.Time {
 			break
 		}
 	}
-	fmt.Printf("this week first day is : %v\n", t)
 	return t
 
 }
@@ -53,5 +52,7 @@ var _ = func() int {
 		panic(err)
 	}
 	Config.ThisWeekFirstDay = getWeekFirstDay(time.Now())
+	fmt.Printf("this week first day is : %v\n", Config.ThisWeekFirstDay)
+	fmt.Printf("stat begin time is : %v\n", Config.StatBeginTime)
 	return 0
 }()

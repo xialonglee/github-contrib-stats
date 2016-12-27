@@ -1,4 +1,6 @@
-# begin time of statistics period
+# begin time of statistics period. 
+# for merged PRs, we only analysis those being merged after begin time.
+# for open PRs, we only analysis those being created after begin time.
 statBeginTime = 2016-10-01T00:00:00
 accessToken = "personal access token"
 
