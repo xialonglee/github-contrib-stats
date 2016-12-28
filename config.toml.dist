@@ -1,7 +1,17 @@
 # begin time of statistics period. 
-# for merged PRs, we only analysis those being merged after begin time.
-# for open PRs, we only analysis those being created after begin time.
+# for merged PRs, we only analysis those being merged after begin time (begin time included).
+# for open PRs, we only analysis those being created after begin time(begin time included).
+# if begin time not specified, it defaults to create time(merge time) of the very first PR. 
+# this usually will result in listing all PRs of specified repository and slow analysis process.
 statBeginTime = 2016-10-01T00:00:00
+
+# end time of statistics period. 
+# for merged PRs, we only analysis those being merged before end time (end time excluded).
+# for open PRs, we only analysis those being created after end time(end time excluded).
+# if end time not specified, it defaults to current time.
+# if end time is specified, week statistics is disabled.
+statEndTime = 2016-10-01T00:00:00
+
 accessToken = "personal access token"
 
 # repositories in which Pull Requests / Commits are analyzed

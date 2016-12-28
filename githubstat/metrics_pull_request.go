@@ -33,6 +33,10 @@ func (w *WeekPullRequestMetrics) merge() {
 
 }
 func (w *WeekPullRequestMetrics) Show() {
+	if !Config.StatEndTime.IsZero() {
+		fmt.Println("Week statistics is disabled because statEndTime is specified")
+		return
+	}
 	w.merge()
 	data := [][]string{}
 	var totalMerged int
@@ -55,7 +59,7 @@ func (w *WeekPullRequestMetrics) Show() {
 	}
 	if len(data) != 0 {
 		table := tablewriter.NewWriter(os.Stdout)
-		fmt.Print("\nStatistics Per Week\n")
+		fmt.Printf("\nStatistics for this Week ( week first day : %v)\n", Config.ThisWeekFirstDay)
 		table.SetHeader([]string{"User Name", "Merged PRs", "Merged Commits",
 			"LGTM'ed PRs", "NonLGTM'ed PRs", "Created PRs"})
 		table.AppendBulk(data)
@@ -117,7 +121,7 @@ func (m *OverallPullRequestMetrics) Show() {
 	}
 	if len(data) != 0 {
 		table := tablewriter.NewWriter(os.Stdout)
-		fmt.Print("\nOverall Statistics\n")
+		fmt.Printf("\nOverall Statistics ( %v ~ %v)\n", Config.StatBeginTime, Config.StatEndTime)
 		mergedCommitsHeader := "Merged Commits(actual/stack)"
 		table.SetHeader([]string{"User Name", "Merged PRs", mergedCommitsHeader, "LGTM'ed PRs", "NonLGTM'ed PRs"})
 		table.AppendBulk(data)
@@ -238,6 +242,9 @@ loop:
 		fmt.Printf("page:%d fin\n", page)
 		for _, pr := range prs {
 			t := pr.CreatedAt
+			if !Config.StatEndTime.IsZero() && !t.Before(Config.StatEndTime) {
+				continue
+			}
 			if !t.Before(Config.StatBeginTime) {
 				allPRs = append(allPRs, pr)
 			} else {
@@ -274,17 +281,19 @@ loop:
 
 		fmt.Printf("page:%d fin\n", page)
 		for _, pr := range prs {
+
 			if pr.MergedAt == nil {
 				continue
 			}
 			t := pr.UpdatedAt
-
 			/*
 				MergedAt is always before UpdatedAt, so if a PR is updated before stat begin time,
 				this PR is absolutely merged before stat begin time.
+				WARNING: UpdatedAt is sorted descendingly, but MergedAt is not. so we can break outer loop according to MergedAt
 			*/
 			if !t.Before(Config.StatBeginTime) {
-				if !pr.MergedAt.Before(Config.StatBeginTime) {
+
+				if !pr.MergedAt.Before(Config.StatBeginTime) && !Config.StatEndTime.IsZero() && pr.MergedAt.Before(Config.StatEndTime) {
 					allPRs = append(allPRs, pr)
 				}
 

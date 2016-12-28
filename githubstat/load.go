@@ -1,7 +1,6 @@
 package githubstat
 
 import (
-	"fmt"
 	"time"
 
 	"github.com/BurntSushi/toml"
@@ -23,6 +22,7 @@ type User struct {
 }
 type Configuration struct {
 	StatBeginTime    time.Time
+	StatEndTime      time.Time
 	AccessToken      string
 	Users            []User
 	Repos            []string
@@ -47,12 +47,12 @@ func getWeekFirstDay(t time.Time) time.Time {
 }
 
 // read config file
-var _ = func() int {
+func init() {
 	if _, err := toml.DecodeFile("./config.toml", &Config); err != nil {
 		panic(err)
 	}
+	if !Config.StatEndTime.After(Config.StatBeginTime) {
+		panic("stat end time must be after stat begin time")
+	}
 	Config.ThisWeekFirstDay = getWeekFirstDay(time.Now())
-	fmt.Printf("this week first day is : %v\n", Config.ThisWeekFirstDay)
-	fmt.Printf("stat begin time is : %v\n", Config.StatBeginTime)
-	return 0
-}()
+}
