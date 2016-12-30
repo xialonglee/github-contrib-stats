@@ -121,7 +121,7 @@ func (m *OverallPullRequestMetrics) Show() {
 	}
 	if len(data) != 0 {
 		table := tablewriter.NewWriter(os.Stdout)
-		fmt.Printf("\nOverall Statistics ( %v ~ %v)\n", Config.StatBeginTime, Config.StatEndTime)
+		fmt.Printf("\nOverall Statistics ( %v ~ %v)\n", Config.StatBeginTime, time.Now())
 		mergedCommitsHeader := "Merged Commits(actual/stack)"
 		table.SetHeader([]string{"User Name", "Merged PRs", mergedCommitsHeader, "LGTM'ed PRs", "NonLGTM'ed PRs"})
 		table.AppendBulk(data)
@@ -293,10 +293,13 @@ loop:
 			*/
 			if !t.Before(Config.StatBeginTime) {
 
-				if !pr.MergedAt.Before(Config.StatBeginTime) && !Config.StatEndTime.IsZero() && pr.MergedAt.Before(Config.StatEndTime) {
-					allPRs = append(allPRs, pr)
+				if !pr.MergedAt.Before(Config.StatBeginTime) {
+					if !Config.StatEndTime.IsZero() && pr.MergedAt.Before(Config.StatEndTime) {
+						allPRs = append(allPRs, pr)
+					}else if Config.StatEndTime.IsZero() {
+						allPRs = append(allPRs, pr)
+					}
 				}
-
 			} else {
 				break loop
 			}

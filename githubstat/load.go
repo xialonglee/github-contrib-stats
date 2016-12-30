@@ -51,7 +51,7 @@ func init() {
 	if _, err := toml.DecodeFile("./config.toml", &Config); err != nil {
 		panic(err)
 	}
-	if !Config.StatEndTime.After(Config.StatBeginTime) {
+	if !Config.StatEndTime.IsZero() && !Config.StatEndTime.After(Config.StatBeginTime) {
 		panic("stat end time must be after stat begin time")
 	}
 	Config.ThisWeekFirstDay = getWeekFirstDay(time.Now())
